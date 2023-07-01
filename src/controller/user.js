@@ -7,18 +7,19 @@ const { ObjectIdCheck, emailRegex, phoneRegex, passwordRegex } = require('../uti
 const SECRET_KEY = "Chandrakant";
 
 // =================================CREATE API==========================================================
+ 
 const userCreate = async (req, res) => {
   try {
     const file = req.files;
     const { fname, lname, phone, email, password, address } = req.body;
 
-    if (phone.length !== 10) {
+    if (phone.length !== 10 || !phoneRegex.test(phone)) {
       return res.status(400).json({ status: false, message: 'Please enter a valid phone number' });
     }
     if (!emailRegex.test(email)) {
       return res.status(400).json({ status: false, message: 'Please enter a valid email' });
     }
-    if (password.length < 8 || password.length > 15) {
+    if (password.length < 8 || password.length > 15 || !passwordRegex.test(password)) {
       return res.status(400).json({ status: false, message: 'Please enter a valid password' });
     }
     if (!address.shipping && !address.billing) {
@@ -52,8 +53,8 @@ const userCreate = async (req, res) => {
     const url = await uploadFiles(file[0]);
 
     const userDetail = req.body
-    userDetail.profileImage =url
-    userDetail.password =hashedPassword
+    userDetail.profileImage = url
+    userDetail.password = hashedPassword
     const user = await userModel.create(userDetail);
     return res.status(200).json({ status: true, message: 'User created successfully', data: user });
   } catch (error) {
@@ -66,6 +67,7 @@ const userCreate = async (req, res) => {
     }
   }
 };
+
 //===============================LOGIN API =======================================================
 const userLogin = async (req, res) => {
     try {
@@ -73,6 +75,12 @@ const userLogin = async (req, res) => {
         if (!email || !password) 
             return res.status(400).json({ status: false, message: 'Please enter email and password' });
         
+            if (!emailRegex.test(email)) {
+              return res.status(400).json({ status: false, message: 'Please enter a valid email' });
+            }
+            if (!passwordRegex.test(password)) {
+              return res.status(400).json({ status: false, message: 'Please enter a valid password' });
+            }
         const user = await userModel.findOne({ email: email });
         if (!user) 
             return res.status(400).json({ status: false, message: 'No user with this email' });
@@ -80,7 +88,7 @@ const userLogin = async (req, res) => {
         const isMatch = await bcrypt.compare(password, user.password);
 
         if (!isMatch) 
-            return res.status(400).json({ status: false, message: 'Invalid email or password' });
+            return res.status(400).json({ status: false, message: 'Invalid password' });
         
         const token = jwt.sign({ _id: user._id }, SECRET_KEY, { expiresIn: '24h' });
 
@@ -105,7 +113,7 @@ const getUserById = async (req, res) => {
         
         const user = await userModel.findById(userId);
         if (!user) {
-            res.status(404).json({ status: false, message: 'User not found' });
+            res.status(404).json({ status: false, message: 'User not found with this ID' });
         }
         res.status(200).json({ status: true, message: 'User Profile Details', data: user });
     } catch (error) {
